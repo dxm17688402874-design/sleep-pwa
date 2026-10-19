@@ -51,7 +51,7 @@
         .form-group { margin-bottom: 16px; }
         .form-label { font-size: 14px; color: var(--text-sub); margin-bottom: 8px; display: block; }
         .tag-group { display: flex; flex-wrap: wrap; gap: 8px; }
-        .tag { padding: 6px 14px; border-radius: 20px; background: var(--card-bg); border: 1px solid var(--card-border); font-size: 13px; color: var(--text-main); cursor: pointer; }
+        .tag { padding: 6px 14px; border-radius: 20px; background: var(--card-bg); border: 1px solid var(--card-border); font-size: 13px; color: var(--text-main); cursor: pointer; margin-right:10px;margin-bottom:10px;}
         .tag.selected { background: var(--accent); border-color: var(--accent); }
         .input-box { width: 100%; padding: 12px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--card-border); color: white; font-size: 16px; margin-bottom: 16px; outline: none; }
         
@@ -78,7 +78,7 @@
         
         /* 列表与滑动删除容器（彻底解决透出与边框外露） */
         .list-container { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
-        .list-item-wrapper { position: relative; overflow: hidden; border-radius: 12px; touch-action: pan-y; }
+        .list-item-wrapper { position: relative; overflow: hidden; border-radius: 12px; touch-action: pan-y; margin-bottom:10px;}
         
         .delete-action { position: absolute; right: 0; top: 0; bottom: 0; width: 80px; background: var(--danger); color: white; display: none; align-items: center; justify-content: center; font-size: 14px; z-index: 1; border-top-right-radius: 12px; border-bottom-right-radius: 12px; cursor: pointer; font-weight: 600; }
         
@@ -156,7 +156,6 @@
                 <button id="sleep-btn" class="sleep-planet-btn">开睡</button>
                 <p id="sleep-status-text" style="margin-top: 14px; font-size: 14px; color: var(--text-sub);">点击记录您的睡眠状态</p>
             </div>
-            <div style="font-size: 14px; color: var(--text-sub); margin-bottom: 8px;">今日睡眠记录</div>
             <div class="list-container" id="sleep-today-list"></div>
         </div>
         <div id="sleep-content-history" style="display:none;">
@@ -165,7 +164,7 @@
         </div>
         <div id="sleep-content-stats" style="display:none;">
             <div style="display: flex; gap: 10px; margin-bottom: 16px;">
-                <select id="sleep-stat-month-select" class="input-box" style="margin-bottom:0; flex:1;">
+                <select id="sleep-stat-month-select" class="input-box" style="margin-bottom:0;margin-right:15px; flex:1;">
                     <option value="all">全年</option>
                     <option value="01">1月</option>
                     <option value="02">2月</option>
