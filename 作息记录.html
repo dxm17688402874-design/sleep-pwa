@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作息记录 - Ming工具箱</title>
+    <style>
+        :root {
+            --bg-main: #0b0f19;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f3f4f6;
+            --text-sub: #9ca3af;
+            --accent: #6366f1;
+            --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+        .container { max-width: 480px; width: 100%; margin: 0 auto; padding: 16px; flex: 1; display: flex; flex-direction: column; padding-bottom: 90px; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 0; }
+        h1 { font-size: 22px; font-weight: 600; cursor: pointer; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(11, 15, 25, 0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; padding: 14px 0; z-index: 99; }
+        .nav-item { color: var(--text-sub); font-size: 14px; background: none; border: none; padding: 6px 12px; cursor: pointer; }
+        .nav-item.active { color: var(--accent); font-weight: 600; }
+        .sleep-hero { background: radial-gradient(circle at center, #1e1b4b 0%, #0b0f19 100%); border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px 20px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.05); }
+        .sleep-planet-btn { width: 140px; height: 140px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: none; color: white; font-size: 18px; font-weight: 600; cursor: pointer; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); display: flex; align-items: center; justify-content: center; }
+        .sleep-planet-btn.awake { background: linear-gradient(135deg, #8b5cf6, #6d28d9); box-shadow: 0 0 30px rgba(139, 92, 246, 0.4); }
+        .input-box { width: 100%; padding: 12px; border-radius: 12px; background: #121824; border: 1px solid var(--card-border); color: white; font-size: 16px; outline: none; }
+        select.input-box { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px; padding-right: 36px; cursor: pointer; }
+        select.input-box option { background-color: #121824; color: var(--text-main); }
+        .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        .card-desc { font-size: 12px; color: var(--text-sub); }
+        .list-container { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .list-item-wrapper { position: relative; overflow: hidden; border-radius: 12px; touch-action: pan-y; }
+        .delete-action { position: absolute; right: 0; top: 0; bottom: 0; width: 80px; background: var(--danger); color: white; display: none; align-items: center; justify-content: center; font-size: 14px; z-index: 1; border-top-right-radius: 12px; border-bottom-right-radius: 12px; font-weight: 600; }
+        .list-item { background-color: #121824; border: 1px solid var(--card-border); padding: 14px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; transition: transform 0.2s ease; border-radius: 12px; }
+        .list-item.highlight { background: linear-gradient(135deg, rgba(79, 70, 229, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%); border-color: var(--accent); }
+        .list-item-wrapper.swiped .list-item { transform: translateX(-80px); }
+        .list-item-wrapper.swiped .delete-action { display: flex; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; margin-bottom: 16px; background: var(--card-bg); padding: 12px; border-radius: 14px; border: 1px solid var(--card-border); }
+        .cal-header { font-size: 12px; color: var(--text-sub); padding-bottom: 6px; }
+        .cal-day { padding: 8px 0; font-size: 14px; border-radius: 8px; cursor: pointer; color: var(--text-sub); }
+        .cal-day.has-record { color: var(--text-main); font-weight: 600; background: rgba(255,255,255,0.08); }
+        .cal-day.selected { background: var(--accent) !important; color: white !important; }
+        .time-slot-row { margin-bottom: 12px; }
+        .time-slot-info { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+        .time-bar-bg { width: 100%; height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+        .time-bar-fill { height: 100%; background: var(--accent-gradient); border-radius: 4px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header><h1 onclick="location.href='index.html'">‹ 作息记录</h1></header>
+
+    <div id="sleep-content-home">
+        <div class="sleep-hero">
+            <button id="sleep-btn" class="sleep-planet-btn">开睡</button>
+            <p id="sleep-status-text" style="margin-top: 14px; font-size: 14px; color: var(--text-sub);">点击记录您的睡眠状态</p>
+        </div>
+        <div style="font-size: 14px; color: var(--text-sub); margin-bottom: 8px;">今日睡眠记录</div>
+        <div class="list-container" id="sleep-today-list"></div>
+    </div>
+
+    <div id="sleep-content-history" style="display:none;">
+        <div id="sleep-calendar-container"></div>
+        <div class="list-container" id="sleep-history-list"></div>
+    </div>
+
+    <div id="sleep-content-stats" style="display:none;">
+        <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+            <select id="sleep-stat-month-select" class="input-box" style="margin-bottom:0; flex:1;">
+                <option value="all">全年</option>
+                <option value="01">1月</option><option value="02">2月</option><option value="03">3月</option><option value="04">4月</option>
+                <option value="05">5月</option><option value="06">6月</option><option value="07">7月</option><option value="08">8月</option>
+                <option value="09">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+            </select>
+            <select id="sleep-stat-year-select" class="input-box" style="margin-bottom:0; width: 110px;"></select>
+        </div>
+        <div class="card" style="margin-bottom:12px;">
+            <div class="card-desc" id="sleep-stat-period-title">本月总睡眠时长</div>
+            <div style="font-size:20px; font-weight:600; margin-top:6px;" id="stat-total-sleep">0小时0分钟</div>
+        </div>
+        <div class="card" style="margin-bottom:12px;">
+            <div class="card-desc">平均每天睡眠时长</div>
+            <div style="font-size:20px; font-weight:600; margin-top:6px;" id="stat-avg-sleep">0小时0分钟</div>
+        </div>
+        <div class="card">
+            <div style="font-size:14px; font-weight:500; margin-bottom:12px;">时段分布</div>
+            <div id="sleep-time-bars" style="display: flex; flex-direction: column; gap: 8px;">暂无时段统计数据</div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-item active" data-sleep-tab="home">首页</button>
+        <button class="nav-item" data-sleep-tab="history">历史</button>
+        <button class="nav-item" data-sleep-tab="stats">统计</button>
+    </div>
+</div>
+
+<script>
+    let db = JSON.parse(localStorage.getItem('ming_toolbox_data')) || { sleeps: [], bills: [], profiles: [], options: {} };
+    function saveDB() { localStorage.setItem('ming_toolbox_data', JSON.stringify(db)); }
+
+    let selectedSleepDate = new Date().toISOString().split('T')[0];
+    let currentSleep = JSON.parse(localStorage.getItem('ming_current_sleep')) || null;
+
+    function formatDuration(m) { return `${Math.floor(m / 60)}小时${m % 60}分钟`; }
+
+    function formatSleepItemHTML(s, origIdx, isHighlight = false) {
+        const d = new Date(s.start);
+        const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+        const dateStrFormatted = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日    ${weekdays[d.getDay()]}`;
+        const endD = new Date(s.end);
+        return `
+            <div class="list-item-wrapper" data-swipe-wrapper>
+                <div class="delete-action" data-del-sleep="${origIdx}">删除</div>
+                <div class="list-item ${isHighlight ? 'highlight' : ''}">
+                    <div>
+                        <div style="font-size:13px; font-weight:600;">${dateStrFormatted}</div>
+                        <div style="font-size:12px; color:var(--text-sub); margin-top:4px;">${d.getHours()}点${d.getMinutes()}分~${endD.getHours()}点${endD.getMinutes()}分</div>
+                    </div>
+                    <div style="font-size:13px; font-weight:600; color:var(--accent);">共休息${formatDuration(Math.round((s.end - s.start)/60000))}</div>
+                </div>
+            </div>`;
+    }
+
+    function initSleepModule() {
+        const btn = document.getElementById('sleep-btn'), txt = document.getElementById('sleep-status-text');
+        if(currentSleep) {
+            btn.innerText = '醒来'; btn.classList.add('awake');
+            txt.innerText = '正在睡眠中... 开始于 ' + new Date(currentSleep.start).toLocaleTimeString();
+        } else {
+            btn.innerText = '开睡'; btn.classList.remove('awake');
+            txt.innerText = '点击记录您的睡眠状态';
+        }
+        renderTodaySleepList();
+    }
+
+    function renderTodaySleepList() {
+        const container = document.getElementById('sleep-today-list');
+        const todayStr = new Date().toISOString().split('T')[0];
+        const matched = db.sleeps.map((s, idx) => ({...s, origIdx: idx})).filter(s => s.dateStr === todayStr);
+        if(matched.length === 0) { container.innerHTML = `<div style="color:var(--text-sub); font-size:13px;">今日暂无睡眠记录</div>`; return; }
+        let html = '';
+        matched.forEach((s, idx) => { html = formatSleepItemHTML(s, s.origIdx, idx === matched.length - 1) + html; });
+        container.innerHTML = html;
+    }
+
+    document.getElementById('sleep-btn').onclick = () => {
+        const now = Date.now();
+        if(!currentSleep) {
+            currentSleep = { start: now };
+            localStorage.setItem('ming_current_sleep', JSON.stringify(currentSleep));
+        } else {
+            db.sleeps.push({ start: currentSleep.start, end: now, dateStr: new Date(currentSleep.start).toISOString().split('T')[0] });
+            saveDB(); currentSleep = null; localStorage.removeItem('ming_current_sleep');
+        }
+        initSleepModule();
+    };
+
+    function switchSleepTab(tab) {
+        ['home', 'history', 'stats'].forEach(t => document.getElementById('sleep-content-' + t).style.display = (t === tab) ? 'block' : 'none');
+        document.querySelectorAll('.bottom-nav .nav-item').forEach(b => b.classList.toggle('active', b.getAttribute('data-sleep-tab') === tab));
+        if(tab === 'home') initSleepModule();
+        if(tab === 'history') renderSleepCalendarAndList();
+        if(tab === 'stats') initSleepStatsView();
+    }
+
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(btn => {
+        btn.onclick = () => switchSleepTab(btn.getAttribute('data-sleep-tab'));
+    });
+
+    function renderSleepCalendarAndList() {
+        const container = document.getElementById('sleep-calendar-container');
+        const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+        const daysInMonth = new Date(y, m + 1, 0).getDate();
+        let recordedDates = new Set(db.sleeps.map(s => s.dateStr));
+        let html = `<div class="calendar-grid"><div class="cal-header">一</div><div class="cal-header">二</div><div class="cal-header">三</div><div class="cal-header">四</div><div class="cal-header">五</div><div class="cal-header">六</div><div class="cal-header">日</div>`;
+        for(let d=1; d<=daysInMonth; d++) {
+            const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            html += `<div class="cal-day ${recordedDates.has(dateKey)?'has-record':''} ${selectedSleepDate===dateKey?'selected':''}" data-sleep-date="${dateKey}">${d}</div>`;
+        }
+        container.innerHTML = html + '</div>';
+        renderSleepListForDate(selectedSleepDate);
+    }
+
+    function renderSleepListForDate(dateStr) {
+        const listCont = document.getElementById('sleep-history-list');
+        const matched = db.sleeps.map((s, idx) => ({...s, origIdx: idx})).filter(s => s.dateStr === dateStr);
+        if(matched.length === 0) { listCont.innerHTML = `<div style="color:var(--text-sub); text-align:center; padding:15px;">${dateStr} 暂无睡眠记录</div>`; return; }
+        let html = '';
+        matched.forEach((s, idx) => { html = formatSleepItemHTML(s, s.origIdx, idx === matched.length - 1) + html; });
+        listCont.innerHTML = html;
+    }
+
+    function initSleepStatsView() {
+        const ySel = document.getElementById('sleep-stat-year-select'), mSel = document.getElementById('sleep-stat-month-select');
+        const curY = new Date().getFullYear();
+        ySel.innerHTML = `${curY},${curY-1},${curY-2},${curY-3}`.split(',').map(y=>`<option value="${y}">${y}年</option>`).join('');
+        ySel.value = curY; mSel.value = String(new Date().getMonth()+1).padStart(2,'0');
+        renderSleepStats();
+    }
+
+    function renderSleepStats() {
+        const yVal = document.getElementById('sleep-stat-year-select').value, mVal = document.getElementById('sleep-stat-month-select').value;
+        let totalMin = 0, slots = [0,0,0,0], days = new Set();
+        db.sleeps.forEach(s => {
+            const [sY, sM] = s.dateStr.split('-');
+            if(sY === yVal && (mVal === 'all' || sM === mVal)) {
+                totalMin += Math.round((s.end - s.start)/60000); days.add(s.dateStr);
+                const h = new Date(s.start).getHours();
+                slots[h<6?0:h<12?1:h<18?2:3]++;
+            }
+        });
+        document.getElementById('sleep-stat-period-title').innerText = mVal==='all'?`${yVal}年度总睡眠时长`:`${yVal}年${parseInt(mVal)}月总睡眠时长`;
+        document.getElementById('stat-total-sleep').innerText = formatDuration(totalMin);
+        document.getElementById('stat-avg-sleep').innerText = formatDuration(Math.round(totalMin/(days.size||1)));
+        const maxS = Math.max(...slots, 1);
+        const slotInfo = [{t:'凌晨',r:'0:00-06:00'},{t:'上午',r:'6:00-12:00'},{t:'下午',r:'12:00-18:00'},{t:'晚上',r:'18:00-24:00'}];
+        document.getElementById('sleep-time-bars').innerHTML = slotInfo.map((si, i) => `
+            <div class="time-slot-row">
+                <div class="time-slot-info"><span style="color:var(--text-main);">${si.t}    ${si.r}</span><span style="color:var(--accent); font-weight:600;">${slots[i]}次</span></div>
+                <div class="time-bar-bg"><div class="time-bar-fill" style="width: ${Math.round(slots[i]/maxS*100)}%;"></div></div>
+            </div>`).join('');
+    }
+
+    let startX = 0, swipedEl = null;
+    document.body.addEventListener('touchstart', e => {
+        const w = e.target.closest('[data-swipe-wrapper]');
+        if(w) { startX = e.touches[0].clientX; if(swipedEl && swipedEl!==w) swipedEl.classList.remove('swiped'); swipedEl = w; }
+        else if(swipedEl) { swipedEl.classList.remove('swiped'); swipedEl = null; }
+    }, {passive:true});
+    document.body.addEventListener('touchend', e => {
+        if(!swipedEl) return;
+        const diff = e.changedTouches[0].clientX - startX;
+        if(diff < -40) swipedEl.classList.add('swiped'); else if(diff > 40) swipedEl.classList.remove('swiped');
+    }, {passive:true});
+
+    document.body.onclick = e => {
+        const day = e.target.closest('[data-sleep-date]');
+        if(day) { selectedSleepDate = day.getAttribute('data-sleep-date'); renderSleepCalendarAndList(); }
+        const del = e.target.closest('[data-del-sleep]');
+        if(del) { db.sleeps.splice(parseInt(del.getAttribute('data-del-sleep')), 1); saveDB(); renderSleepCalendarAndList(); renderTodaySleepList(); }
+    };
+
+    document.getElementById('sleep-stat-month-select').onchange = renderSleepStats;
+    document.getElementById('sleep-stat-year-select').onchange = renderSleepStats;
+
+    initSleepModule();
+</script>
+</body>
+</html>
