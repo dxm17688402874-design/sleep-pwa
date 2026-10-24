@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账单记录 - Ming工具箱</title>
+    <style>
+        :root {
+            --bg-main: #0b0f19;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f3f4f6;
+            --text-sub: #9ca3af;
+            --accent: #6366f1;
+            --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+        .container { max-width: 480px; width: 100%; margin: 0 auto; padding: 16px; flex: 1; display: flex; flex-direction: column; padding-bottom: 90px; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 0; }
+        h1 { font-size: 22px; font-weight: 600; cursor: pointer; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(11, 15, 25, 0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; padding: 14px 0; z-index: 99; }
+        .nav-item { color: var(--text-sub); font-size: 14px; background: none; border: none; padding: 6px 12px; cursor: pointer; }
+        .nav-item.active { color: var(--accent); font-weight: 600; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { font-size: 14px; color: var(--text-sub); margin-bottom: 8px; display: block; }
+        .tag-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag { padding: 6px 14px; border-radius: 20px; background: var(--card-bg); border: 1px solid var(--card-border); font-size: 13px; color: var(--text-main); cursor: pointer; }
+        .tag.selected { background: var(--accent); border-color: var(--accent); }
+        .input-box { width: 100%; padding: 12px; border-radius: 12px; background: #121824; border: 1px solid var(--card-border); color: white; font-size: 16px; margin-bottom: 16px; outline: none; }
+        select.input-box { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px; padding-right: 36px; cursor: pointer; }
+        select.input-box option { background-color: #121824; color: var(--text-main); }
+        .btn-primary { width: 100%; padding: 12px; border-radius: 12px; background: var(--accent-gradient); color: white; border: none; font-size: 16px; font-weight: 600; cursor: pointer; }
+        .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        .card-desc { font-size: 12px; color: var(--text-sub); }
+        .list-container { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .list-item-wrapper { position: relative; overflow: hidden; border-radius: 12px; touch-action: pan-y; }
+        .delete-action { position: absolute; right: 0; top: 0; bottom: 0; width: 80px; background: var(--danger); color: white; display: none; align-items: center; justify-content: center; font-size: 14px; z-index: 1; border-top-right-radius: 12px; border-bottom-right-radius: 12px; font-weight: 600; }
+        .list-item { background-color: #121824; border: 1px solid var(--card-border); padding: 14px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; transition: transform 0.2s ease; border-radius: 12px; }
+        .list-item.highlight { background: linear-gradient(135deg, rgba(79, 70, 229, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%); border-color: var(--accent); }
+        .list-item-wrapper.swiped .list-item { transform: translateX(-80px); }
+        .list-item-wrapper.swiped .delete-action { display: flex; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; margin-bottom: 16px; background: var(--card-bg); padding: 12px; border-radius: 14px; border: 1px solid var(--card-border); }
+        .cal-header { font-size: 12px; color: var(--text-sub); padding-bottom: 6px; }
+        .cal-day { padding: 8px 0; font-size: 14px; border-radius: 8px; cursor: pointer; color: var(--text-sub); }
+        .cal-day.has-record { color: var(--text-main); font-weight: 600; background: rgba(255,255,255,0.08); }
+        .cal-day.selected { background: var(--accent) !important; color: white !important; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header><h1 onclick="location.href='index.html'">‹ 账单记录</h1></header>
+
+    <div id="bill-content-record">
+        <div class="form-group"><label class="form-label">品类</label><div class="tag-group" id="tags-category"></div></div>
+        <div class="form-group"><label class="form-label">平台</label><div class="tag-group" id="tags-platform"></div></div>
+        <div class="form-group"><label class="form-label">品名</label><div class="tag-group" id="tags-item"></div></div>
+        <div class="form-group"><label class="form-label">金额 (元)</label><input type="number" step="0.01" id="bill-amount" class="input-box" placeholder="0.00"></div>
+        <button class="btn-primary" id="save-bill-btn">保存账单</button>
+        <div style="margin-top: 16px; font-size: 14px; color: var(--text-sub);">今日总消费: <span id="today-total" style="color:var(--text-main); font-weight:600;">0.00</span> 元</div>
+        <div style="font-size: 14px; color: var(--text-sub); margin-top: 16px; margin-bottom: 8px;">今日消费记录</div>
+        <div class="list-container" id="bill-today-list"></div>
+    </div>
+
+    <div id="bill-content-history" style="display:none;">
+        <div id="bill-calendar-container"></div>
+        <div id="bill-day-total-banner" style="font-size:14px; font-weight:600; color:var(--text-main); margin-bottom:10px; background:var(--card-bg); padding:10px 14px; border-radius:10px; border:1px solid var(--card-border);"></div>
+        <div class="list-container" id="bill-history-list"></div>
+    </div>
+
+    <div id="bill-content-stats" style="display:none;">
+        <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+            <select id="stat-month-select" class="input-box" style="margin-bottom:0; flex:1;">
+                <option value="all">全年</option>
+                <option value="01">1月</option><option value="02">2月</option><option value="03">3月</option><option value="04">4月</option>
+                <option value="05">5月</option><option value="06">6月</option><option value="07">7月</option><option value="08">8月</option>
+                <option value="09">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+            </select>
+            <select id="stat-year-select" class="input-box" style="margin-bottom:0; width: 110px;"></select>
+        </div>
+        <div class="card" style="margin-bottom:12px;">
+            <div class="card-desc" id="bill-stat-period-title">本月总消费</div>
+            <div style="font-size:22px; font-weight:600; margin-top:6px;" id="bill-stat-period-total">0.00 元</div>
+        </div>
+        <div class="card" style="margin-bottom:12px;">
+            <div class="card-desc">本日总消费 (固定显示今天)</div>
+            <div style="font-size:22px; font-weight:600; margin-top:6px;" id="bill-stat-today-total">0.00 元</div>
+        </div>
+        <div class="card" id="bill-stat-rankings"></div>
+    </div>
+
+    <div class="bottom-nav">
+        <button class="nav-item active" data-bill-tab="record">记账</button>
+        <button class="nav-item" data-bill-tab="history">历史账单</button>
+        <button class="nav-item" data-bill-tab="stats">统计</button>
+    </div>
+</div>
+
+<script>
+    let db = JSON.parse(localStorage.getItem('ming_toolbox_data')) || { sleeps: [], bills: [], profiles: [], options: { category: ['衣服', '外卖'], platform: ['美团', '京东'], item: ['炒饭', '衬衫'] } };
+    function saveDB() { localStorage.setItem('ming_toolbox_data', JSON.stringify(db)); }
+
+    let selectedBillDate = new Date().toISOString().split('T')[0];
+    let selectedTag = { category: '', platform: '', item: '' };
+
+    function formatBillItemHTML(b, origIdx, isHighlight = false) {
+        return `
+            <div class="list-item-wrapper" data-swipe-wrapper>
+                <div class="delete-action" data-del-bill="${origIdx}">删除</div>
+                <div class="list-item ${isHighlight ? 'highlight' : ''}">
+                    <div>
+                        <div style="font-weight:600;">${b.item} <span style="font-size:12px; color:var(--text-sub);">(${b.category} / ${b.platform})</span></div>
+                        <div style="font-size:12px; color:var(--text-sub); margin-top:4px;">${b.date} ${b.time}</div>
+                    </div>
+                    <div style="font-weight:600; color:var(--danger);">-¥${b.amount.toFixed(2)}</div>
+                </div>
+            </div>`;
+    }
+
+    function initBillModule() {
+        renderTags('category'); renderTags('platform'); renderTags('item');
+        calcTodayTotal(); renderTodayBillList();
+    }
+
+    function getSortedOptions(type) {
+        let counts = {}; db.options[type].forEach(o => counts[o] = 0);
+        db.bills.forEach(b => { if(b[type] && counts[b[type]] !== undefined) counts[b[type]]++; });
+        return [...db.options[type]].sort((a,b) => counts[b] - counts[a]);
+    }
+
+    function renderTags(type) {
+        const container = document.getElementById('tags-' + type);
+        const sorted = getSortedOptions(type);
+        if(!selectedTag[type] || !sorted.includes(selectedTag[type])) selectedTag[type] = sorted[0] || '';
+        container.innerHTML = sorted.map(opt => `<div class="tag ${selectedTag[type]===opt?'selected':''}" data-tag-type="${type}" data-tag-val="${opt}">${opt}</div>`).join('') + `<div class="tag" data-add-tag="${type}">+ 添加</div>`;
+    }
+
+    document.getElementById('save-bill-btn').onclick = () => {
+        const amt = parseFloat(document.getElementById('bill-amount').value);
+        if(isNaN(amt) || amt <= 0) { alert('请输入正确的金额！'); return; }
+        db.bills.push({ category: selectedTag.category, platform: selectedTag.platform, item: selectedTag.item, amount: amt, date: new Date().toISOString().split('T')[0], time: new Date().toLocaleTimeString() });
+        saveDB(); document.getElementById('bill-amount').value = '';
+        calcTodayTotal(); renderTodayBillList(); alert('账单记录成功！');
+    };
+
+    function calcTodayTotal() {
+        const today = new Date().toISOString().split('T')[0];
+        let total = 0; db.bills.forEach(b => { if(b.date === today) total += b.amount; });
+        document.getElementById('today-total').innerText = total.toFixed(2);
+    }
+
+    function renderTodayBillList() {
+        const container = document.getElementById('bill-today-list');
+        const todayStr = new Date().toISOString().split('T')[0];
+        const matched = db.bills.map((b, idx) => ({...b, origIdx: idx})).filter(b => b.date === todayStr);
+        if(matched.length === 0) { container.innerHTML = `<div style="color:var(--text-sub); font-size:13px;">今日暂无消费记录</div>`; return; }
+        let html = ''; matched.forEach((b, idx) => { html = formatBillItemHTML(b, b.origIdx, idx === matched.length - 1) + html; });
+        container.innerHTML = html;
+    }
+
+    function switchBillTab(tab) {
+        ['record', 'history', 'stats'].forEach(t => document.getElementById('bill-content-' + t).style.display = (t === tab) ? 'block' : 'none');
+        document.querySelectorAll('.bottom-nav .nav-item').forEach(b => b.classList.toggle('active', b.getAttribute('data-bill-tab') === tab));
+        if(tab === 'record') initBillModule();
+        if(tab === 'history') renderBillCalendarAndList();
+        if(tab === 'stats') initBillStatsView();
+    }
+
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(btn => {
+        btn.onclick = () => switchBillTab(btn.getAttribute('data-bill-tab'));
+    });
+
+    function renderBillCalendarAndList() {
+        const container = document.getElementById('bill-calendar-container');
+        const now = new Date(), y = now.getFullYear(), m = now.getMonth();
+        const daysInMonth = new Date(y, m + 1, 0).getDate();
+        let recordedDates = new Set(db.bills.map(b => b.date));
+        let html = `<div class="calendar-grid"><div class="cal-header">一</div><div class="cal-header">二</div><div class="cal-header">三</div><div class="cal-header">四</div><div class="cal-header">五</div><div class="cal-header">六</div><div class="cal-header">日</div>`;
+        for(let d=1; d<=daysInMonth; d++) {
+            const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            html += `<div class="cal-day ${recordedDates.has(dateKey)?'has-record':''} ${selectedBillDate===dateKey?'selected':''}" data-bill-date="${dateKey}">${d}</div>`;
+        }
+        container.innerHTML = html + '</div>';
+        renderBillListForDate(selectedBillDate);
+    }
+
+    function renderBillListForDate(dateStr) {
+        const listCont = document.getElementById('bill-history-list'), banner = document.getElementById('bill-day-total-banner');
+        const matched = db.bills.map((b, idx) => ({...b, origIdx: idx})).filter(b => b.date === dateStr);
+        let dayTotal = 0; matched.forEach(b => dayTotal += b.amount);
+        const [y, m, d] = dateStr.split('-');
+        banner.innerText = `${y}年${parseInt(m)}月${parseInt(d)}日总消费金额：${dayTotal.toFixed(2)}元`;
+        if(matched.length === 0) { listCont.innerHTML = `<div style="color:var(--text-sub); text-align:center; padding:15px;">${dateStr} 暂无账单记录</div>`; return; }
+        let html = ''; matched.forEach((b, idx) => { html = formatBillItemHTML(b, b.origIdx, idx === matched.length - 1) + html; });
+        listCont.innerHTML = html;
+    }
+
+    function initBillStatsView() {
+        const ySel = document.getElementById('stat-year-select'), mSel = document.getElementById('stat-month-select');
+        const curY = new Date().getFullYear();
+        ySel.innerHTML = `${curY},${curY-1},${curY-2},${curY-3}`.split(',').map(y=>`<option value="${y}">${y}年</option>`).join('');
+        ySel.value = curY; mSel.value = String(new Date().getMonth()+1).padStart(2,'0');
+        renderBillStats();
+    }
+
+    function renderBillStats() {
+        const yVal = document.getElementById('stat-year-select').value, mVal = document.getElementById('stat-month-select').value;
+        const today = new Date().toISOString().split('T')[0];
+        let periodTotal = 0, todayTotal = 0, filtered = [];
+        db.bills.forEach(b => {
+            if(b.date === today) todayTotal += b.amount;
+            const [bY, bM] = b.date.split('-');
+            if(bY === yVal && (mVal === 'all' || bM === mVal)) { periodTotal += b.amount; filtered.push(b); }
+        });
+        document.getElementById('bill-stat-period-title').innerText = mVal==='all'?`${yVal}年度总消费`:`${yVal}年${parseInt(mVal)}月总消费`;
+        document.getElementById('bill-stat-period-total').innerText = periodTotal.toFixed(2) + ' 元';
+        document.getElementById('bill-stat-today-total').innerText = todayTotal.toFixed(2) + ' 元';
+
+        let cat = {}, plat = {}, item = {};
+        filtered.forEach(b => {
+            cat[b.category] = (cat[b.category]||0) + b.amount;
+            plat[b.platform] = (plat[b.platform]||0) + b.amount;
+            item[b.item] = (item[b.item]||0) + b.amount;
+        });
+        const getTop = obj => { const keys = Object.keys(obj); if(!keys.length) return '暂无数据'; keys.sort((a,b)=>obj[b]-obj[a]); return `${keys[0]} (¥${obj[keys[0]].toFixed(2)})`; };
+        document.getElementById('bill-stat-rankings').innerHTML = `
+            <div style="font-size:14px; font-weight:500; margin-bottom:10px;">消费排行分析</div>
+            <div style="font-size:13px; color:var(--text-sub); display:flex; flex-direction:column; gap:6px;">
+                <div>金额最高品类: <span style="color:var(--text-main);">${getTop(cat)}</span></div>
+                <div>花费最高平台: <span style="color:var(--text-main);">${getTop(plat)}</span></div>
+                <div>金额最高品名: <span style="color:var(--text-main);">${getTop(item)}</span></div>
+            </div>`;
+    }
+
+    let startX = 0, swipedEl = null;
+    document.body.addEventListener('touchstart', e => {
+        const w = e.target.closest('[data-swipe-wrapper]');
+        if(w) { startX = e.touches[0].clientX; if(swipedEl && swipedEl!==w) swipedEl.classList.remove('swiped'); swipedEl = w; }
+        else if(swipedEl) { swipedEl.classList.remove('swiped'); swipedEl = null; }
+    }, {passive:true});
+    document.body.addEventListener('touchend', e => {
+        if(!swipedEl) return;
+        const diff = e.changedTouches[0].clientX - startX;
+        if(diff < -40) swipedEl.classList.add('swiped'); else if(diff > 40) swipedEl.classList.remove('swiped');
+    }, {passive:true});
+
+    document.body.onclick = e => {
+        const day = e.target.closest('[data-bill-date]');
+        if(day) { selectedBillDate = day.getAttribute('data-bill-date'); renderBillCalendarAndList(); }
+        const addTag = e.target.closest('[data-add-tag]');
+        if(addTag) {
+            const type = addTag.getAttribute('data-add-tag'), name = prompt('请输入新选项名称：');
+            if(name && name.trim()) { db.options[type].push(name.trim()); saveDB(); renderTags(type); }
+        }
+        const tag = e.target.closest('[data-tag-type]');
+        if(tag) { selectedTag[tag.getAttribute('data-tag-type')] = tag.getAttribute('data-tag-val'); renderTags(tag.getAttribute('data-tag-type')); }
+        const del = e.target.closest('[data-del-bill]');
+        if(del) { db.bills.splice(parseInt(del.getAttribute('data-del-bill')), 1); saveDB(); renderBillCalendarAndList(); renderTodayBillList(); calcTodayTotal(); }
+    };
+
+    document.getElementById('stat-month-select').onchange = renderBillStats;
+    document.getElementById('stat-year-select').onchange = renderBillStats;
+
+    initBillModule();
+</script>
+</body>
+</html>
