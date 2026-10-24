@@ -102,7 +102,16 @@
     let db = JSON.parse(localStorage.getItem('ming_toolbox_data')) || { sleeps: [], bills: [], profiles: [], options: {} };
     function saveDB() { localStorage.setItem('ming_toolbox_data', JSON.stringify(db)); }
 
-    let selectedSleepDate = new Date().toISOString().split('T')[0];
+    // 获取本地格式化日期字符串辅助函数
+    function getLocalDateStr(timestamp) {
+        const d = new Date(timestamp);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    let selectedSleepDate = getLocalDateStr(Date.now());
     let currentSleep = JSON.parse(localStorage.getItem('ming_current_sleep')) || null;
 
     function formatDuration(m) { return `${Math.floor(m / 60)}小时${m % 60}分钟`; }
@@ -139,7 +148,7 @@
 
     function renderTodaySleepList() {
         const container = document.getElementById('sleep-today-list');
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getLocalDateStr(Date.now());
         const matched = db.sleeps.map((s, idx) => ({...s, origIdx: idx})).filter(s => s.dateStr === todayStr);
         if(matched.length === 0) { container.innerHTML = `<div style="color:var(--text-sub); font-size:13px;">今日暂无睡眠记录</div>`; return; }
         let html = '';
@@ -153,7 +162,9 @@
             currentSleep = { start: now };
             localStorage.setItem('ming_current_sleep', JSON.stringify(currentSleep));
         } else {
-            db.sleeps.push({ start: currentSleep.start, end: now, dateStr: new Date(currentSleep.start).toISOString().split('T')[0] });
+            // 严格以开睡（开始）的本地日期作为归属日期
+            const assignedDateStr = getLocalDateStr(currentSleep.start);
+            db.sleeps.push({ start: currentSleep.start, end: now, dateStr: assignedDateStr });
             saveDB(); currentSleep = null; localStorage.removeItem('ming_current_sleep');
         }
         initSleepModule();
