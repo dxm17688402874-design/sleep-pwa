@@ -32,7 +32,6 @@
         .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
         .card-desc { font-size: 12px; color: var(--text-sub); }
         
-        /* 列表间距优化：10px 完美隔开 */
         .list-container { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
         .list-item-wrapper { position: relative; overflow: hidden; border-radius: 12px; touch-action: pan-y; margin-bottom: 10px; }
         .list-container .list-item-wrapper:last-child { margin-bottom: 0; }
@@ -111,14 +110,19 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
-    // 根据小时判断时段的公用函数 (0-6凌晨, 6-12上午, 12-18下午, 18-24晚上)
+    // 严谨的时段判断函数：0-6凌晨，6-12上午，12-18下午，18-24晚上
     function getTimePeriodStr(dateObj) {
         const h = dateObj.getHours();
+        const m = dateObj.getMinutes();
         let prefix = '凌晨';
-        if (h >= 6 && h < 12) prefix = '上午';
-        else if (h >= 12 && h < 18) prefix = '下午';
-        else if (h >= 18 && h < 24) prefix = '晚上';
-        return `${prefix}${h}点${String(dateObj.getMinutes()).padStart(2, '0')}分`;
+        if (h >= 6 && h < 12) {
+            prefix = '上午';
+        } else if (h >= 12 && h < 18) {
+            prefix = '下午';
+        } else if (h >= 18 && h < 24) {
+            prefix = '晚上';
+        }
+        return `${prefix}${h}点${m}分`;
     }
 
     let selectedSleepDate = getLocalDateStr(Date.now());
