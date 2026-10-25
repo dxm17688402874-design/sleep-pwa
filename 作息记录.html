@@ -31,8 +31,12 @@
         select.input-box option { background-color: #121824; color: var(--text-main); }
         .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
         .card-desc { font-size: 12px; color: var(--text-sub); }
+        
+        /* 列表间距优化：10px 完美隔开 */
         .list-container { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
-        .list-item-wrapper { position: relative; overflow: hidden; border-radius: 12px; touch-action: pan-y;margin-bottom: 10px; }
+        .list-item-wrapper { position: relative; overflow: hidden; border-radius: 12px; touch-action: pan-y; margin-bottom: 10px; }
+        .list-container .list-item-wrapper:last-child { margin-bottom: 0; }
+
         .delete-action { position: absolute; right: 0; top: 0; bottom: 0; width: 80px; background: var(--danger); color: white; display: none; align-items: center; justify-content: center; font-size: 14px; z-index: 1; border-top-right-radius: 12px; border-bottom-right-radius: 12px; font-weight: 600; }
         .list-item { background-color: #121824; border: 1px solid var(--card-border); padding: 14px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; transition: transform 0.2s ease; border-radius: 12px; }
         .list-item.highlight { background: linear-gradient(135deg, rgba(79, 70, 229, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%); border-color: var(--accent); }
@@ -102,13 +106,19 @@
     let db = JSON.parse(localStorage.getItem('ming_toolbox_data')) || { sleeps: [], bills: [], profiles: [], options: {} };
     function saveDB() { localStorage.setItem('ming_toolbox_data', JSON.stringify(db)); }
 
-    // 获取本地格式化日期字符串辅助函数
     function getLocalDateStr(timestamp) {
         const d = new Date(timestamp);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    // 根据小时判断时段的公用函数 (0-6凌晨, 6-12上午, 12-18下午, 18-24晚上)
+    function getTimePeriodStr(dateObj) {
+        const h = dateObj.getHours();
+        let prefix = '凌晨';
+        if (h >= 6 && h < 12) prefix = '上午';
+        else if (h >= 12 && h < 18) prefix = '下午';
+        else if (h >= 18 && h < 24) prefix = '晚上';
+        return `${prefix}${h}点${String(dateObj.getMinutes()).padStart(2, '0')}分`;
     }
 
     let selectedSleepDate = getLocalDateStr(Date.now());
@@ -138,7 +148,8 @@
         const btn = document.getElementById('sleep-btn'), txt = document.getElementById('sleep-status-text');
         if(currentSleep) {
             btn.innerText = '醒来'; btn.classList.add('awake');
-            txt.innerText = '正在睡眠中... 开始于 ' + new Date(currentSleep.start).toLocaleTimeString();
+            const startDate = new Date(currentSleep.start);
+            txt.innerText = `正在睡眠中... 睡眠时间：${getTimePeriodStr(startDate)}`;
         } else {
             btn.innerText = '开睡'; btn.classList.remove('awake');
             txt.innerText = '点击记录您的睡眠状态';
@@ -162,7 +173,6 @@
             currentSleep = { start: now };
             localStorage.setItem('ming_current_sleep', JSON.stringify(currentSleep));
         } else {
-            // 严格以开睡（开始）的本地日期作为归属日期
             const assignedDateStr = getLocalDateStr(currentSleep.start);
             db.sleeps.push({ start: currentSleep.start, end: now, dateStr: assignedDateStr });
             saveDB(); currentSleep = null; localStorage.removeItem('ming_current_sleep');
